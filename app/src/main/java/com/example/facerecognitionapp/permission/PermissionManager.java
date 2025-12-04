@@ -16,11 +16,11 @@ public class PermissionManager {
      * 检查是否有摄像头权限
      */
     public static boolean hasCameraPermission(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { // Android 6.0+
             return ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
                     == PackageManager.PERMISSION_GRANTED;
         }
-        return true;
+        return true; // Android 5.0 及以下自动通过
     }
 
     /**

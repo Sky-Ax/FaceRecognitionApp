@@ -17,7 +17,7 @@ public class SimpleImageAnalyzer implements ImageAnalysis.Analyzer {
         int height = image.getHeight();
         long timestamp = image.getImageInfo().getTimestamp();
         
-        Log.d(TAG, "Frame: " + width + "x" + height + " timestamp: " + timestamp);
+        Log.d(TAG, "帧信息 - 分辨率: " + width + "x" + height + " 时间戳: " + timestamp);
         
         // 必须关闭image，否则会导致后续帧无法获取
         image.close();

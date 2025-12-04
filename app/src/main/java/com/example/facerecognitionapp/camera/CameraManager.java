@@ -18,7 +18,7 @@ import java.util.concurrent.ExecutionException;
 
 public class CameraManager {
     private static final String TAG = "CameraManager";
-    private ProcessCameraProvider cameraProvider;
+    private ProcessCameraProvider cameraProvider; // 摄像头提供者
     private Camera camera;
     private ImageAnalysis imageAnalysis;
     private Context context;
@@ -32,17 +32,18 @@ public class CameraManager {
      */
     public void startCamera(LifecycleOwner lifecycleOwner, PreviewView previewView, 
                            ImageAnalysis.Analyzer analyzer) {
+        // 向系统请求摄像头-异步-等待所有初始化
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
                 ProcessCameraProvider.getInstance(context);
 
         cameraProviderFuture.addListener(() -> {
             try {
-                // 获取CameraProvider
+                // 获取CameraProvider实例，拿到摄像头控制权
                 cameraProvider = cameraProviderFuture.get();
 
                 // 配置Preview
                 Preview preview = new Preview.Builder().build();
-                preview.setSurfaceProvider(previewView.getSurfaceProvider());
+                preview.setSurfaceProvider(previewView.getSurfaceProvider()); // 把相机内容挂载到UI
 
                 // 配置ImageAnalysis（用于实时分析每一帧）
                 imageAnalysis = new ImageAnalysis.Builder()
@@ -50,15 +51,15 @@ public class CameraManager {
                         .build();
                 imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(context), analyzer);
 
-                // 选择前置摄像头
+                // 选择前置摄像头LENS_FACING_FRONT
                 CameraSelector cameraSelector = new CameraSelector.Builder()
                         .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
                         .build();
 
-                // 解绑所有用例
+                // 先清理旧的绑定
                 cameraProvider.unbindAll();
 
-                // 绑定用例到生命周期
+                // 绑定用例到Activity 
                 camera = cameraProvider.bindToLifecycle(
                         lifecycleOwner,
                         cameraSelector,
@@ -66,10 +67,10 @@ public class CameraManager {
                         imageAnalysis
                 );
 
-                Log.d(TAG, "Camera started successfully");
+                Log.d(TAG, "摄像头启动成功");
 
             } catch (ExecutionException | InterruptedException e) {
-                Log.e(TAG, "Failed to start camera", e);
+                Log.e(TAG, "摄像头启动失败", e);
             }
         }, ContextCompat.getMainExecutor(context));
     }
@@ -80,7 +81,7 @@ public class CameraManager {
     public void stopCamera() {
         if (cameraProvider != null) {
             cameraProvider.unbindAll();
-            Log.d(TAG, "Camera stopped");
+            Log.d(TAG, "摄像头已停止");
         }
     }
 

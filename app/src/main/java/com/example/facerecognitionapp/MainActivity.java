@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
      * 启动摄像头
      */
     private void startCamera() {
-        Log.d(TAG, "Starting camera");
+        Log.d(TAG, "正在启动摄像头");
         SimpleImageAnalyzer analyzer = new SimpleImageAnalyzer();
         cameraManager.startCamera(this, previewView, analyzer);
     }
@@ -47,10 +47,10 @@ public class MainActivity extends AppCompatActivity {
 
         if (requestCode == PermissionManager.CAMERA_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "Camera permission granted");
+                Log.d(TAG, "摄像头权限已授予");
                 startCamera();
             } else {
-                Log.d(TAG, "Camera permission denied");
+                Log.d(TAG, "摄像头权限被拒绝");
             }
         }
     }
