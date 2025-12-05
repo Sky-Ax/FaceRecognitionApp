@@ -15,8 +15,10 @@ import androidx.lifecycle.LifecycleOwner;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 
 public class CameraManager {
+
     private static final String TAG = "CameraManager";
     private ProcessCameraProvider cameraProvider; // 摄像头提供者
     private Camera camera;
@@ -30,8 +32,8 @@ public class CameraManager {
     /**
      * 启动摄像头
      */
-    public void startCamera(LifecycleOwner lifecycleOwner, PreviewView previewView, 
-                           ImageAnalysis.Analyzer analyzer) {
+    public void startCamera(LifecycleOwner lifecycleOwner, PreviewView previewView,
+                            ImageAnalysis.Analyzer analyzer) {
         // 向系统请求摄像头-异步-等待所有初始化
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
                 ProcessCameraProvider.getInstance(context);
@@ -49,12 +51,14 @@ public class CameraManager {
                 imageAnalysis = new ImageAnalysis.Builder()
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build();
-                imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(context), analyzer);
+//                imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(context), analyzer);
+                imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor(), analyzer); // 分析器放到后台线程中进行
 
-                // 选择前置摄像头LENS_FACING_FRONT
-                CameraSelector cameraSelector = new CameraSelector.Builder()
-                        .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
-                        .build();
+                // 选择摄像头：优先前置，不可用则使用后置
+                CameraSelector cameraSelector = selectCamera(cameraProvider);
+                if (cameraSelector == null) {
+                    throw new Exception("设备无可用的前置/后置摄像头");
+                }
 
                 // 先清理旧的绑定
                 cameraProvider.unbindAll();
@@ -70,9 +74,44 @@ public class CameraManager {
                 Log.d(TAG, "摄像头启动成功");
 
             } catch (ExecutionException | InterruptedException e) {
-                Log.e(TAG, "摄像头启动失败", e);
+                Log.e(TAG, "摄像头启动异常", e);
+            } catch (Exception e) {
+                Log.e(TAG, "摄像头启动失败：" + e.getMessage(), e);
             }
         }, ContextCompat.getMainExecutor(context));
+    }
+
+    /**
+     * 选择摄像头：优先前置，不可用则使用后置
+     */
+    private CameraSelector selectCamera(ProcessCameraProvider cameraProvider) {
+        CameraSelector frontCamera = new CameraSelector.Builder()
+                .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
+                .build();
+
+        CameraSelector backCamera = new CameraSelector.Builder()
+                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                .build();
+
+        try {
+            // 缓存查询结果，避免重复调用 hasCamera()
+            boolean hasFront = cameraProvider.hasCamera(frontCamera);
+            boolean hasBack = cameraProvider.hasCamera(backCamera);
+
+            if (hasFront) {
+                Log.d(TAG, "使用前置摄像头");
+                return frontCamera;
+            } else if (hasBack) {
+                Log.i(TAG, "前置摄像头不可用，切换到后置摄像头");
+                return backCamera;
+            } else {
+                Log.e(TAG, "没有可用的摄像头");
+                return null;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "摄像头选择失败", e);
+            return frontCamera;
+        }
     }
 
     /**
