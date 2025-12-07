@@ -8,4 +8,10 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- 人脸检测结果绘制层 -->
+    <com.example.facerecognitionapp.ui.FaceOverlayView
+        android:id="@+id/faceOverlayView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
 </FrameLayout>

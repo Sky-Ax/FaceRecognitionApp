@@ -24,9 +24,24 @@ public class CameraManager {
     private Camera camera;
     private ImageAnalysis imageAnalysis;
     private Context context;
+    private CameraInitializationListener initListener;
+
+    /**
+     * 相机初始化监听器接口
+     */
+    public interface CameraInitializationListener {
+        void onCameraInitialized(boolean success, String message);
+    }
 
     public CameraManager(Context context) {
         this.context = context;
+    }
+
+    /**
+     * 设置相机初始化监听器
+     */
+    public void setInitializationListener(CameraInitializationListener listener) {
+        this.initListener = listener;
     }
 
     /**
@@ -49,9 +64,10 @@ public class CameraManager {
 
                 // 配置ImageAnalysis（用于实时分析每一帧）
                 imageAnalysis = new ImageAnalysis.Builder()
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST) // 只处理最新帧
+                        .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888) // ML Kit 适配格式
                         .build();
-//                imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(context), analyzer);
+//                imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(context), analyzer); // 不要放在主线程可能会影响程序运行
                 imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor(), analyzer); // 分析器放到后台线程中进行
 
                 // 选择摄像头：优先前置，不可用则使用后置
@@ -72,11 +88,20 @@ public class CameraManager {
                 );
 
                 Log.d(TAG, "摄像头启动成功");
+                if (initListener != null) {
+                    initListener.onCameraInitialized(true, "摄像头初始化成功");
+                }
 
             } catch (ExecutionException | InterruptedException e) {
                 Log.e(TAG, "摄像头启动异常", e);
+                if (initListener != null) {
+                    initListener.onCameraInitialized(false, "摄像头启动异常：" + e.getMessage());
+                }
             } catch (Exception e) {
                 Log.e(TAG, "摄像头启动失败：" + e.getMessage(), e);
+                if (initListener != null) {
+                    initListener.onCameraInitialized(false, "摄像头启动失败：" + e.getMessage());
+                }
             }
         }, ContextCompat.getMainExecutor(context));
     }
