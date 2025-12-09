@@ -12,6 +12,9 @@ import com.example.facerecognitionapp.camera.CameraManager;
 import com.example.facerecognitionapp.detection.ImageAnalyzer;
 import com.example.facerecognitionapp.permission.PermissionManager;
 import com.example.facerecognitionapp.ui.FaceOverlayView;
+import com.example.facerecognitionapp.util.FaceImageLoader;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -19,6 +22,7 @@ public class MainActivity extends AppCompatActivity {
     private PreviewView previewView;
     private FaceOverlayView faceOverlayView;
     private ImageAnalyzer analyzer;
+    private List<FaceImageLoader.FaceImage> faceImages;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +53,9 @@ public class MainActivity extends AppCompatActivity {
             });
         });
 
+        // 在后台线程同步加载人脸图片
+        loadFaceImagesInBackground();
+
         // 检查摄像头权限
         if (PermissionManager.hasCameraPermission(this)) {
             startCamera();
@@ -56,6 +63,28 @@ public class MainActivity extends AppCompatActivity {
             // 请求权限
             PermissionManager.requestCameraPermission(this);
         }
+    }
+
+    /**
+     * 在后台线程加载人脸图片
+     */
+    private void loadFaceImagesInBackground() {
+        new Thread(() -> {
+            Log.d(TAG, "后台线程：开始加载人脸图片");
+            faceImages = FaceImageLoader.loadAllFaceImages(this);
+            runOnUiThread(() -> {
+                if (faceImages != null && !faceImages.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "加载了 " + faceImages.size() + " 张人脸图片", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "人脸图片加载完成，共 " + faceImages.size() + " 张");
+                    for (FaceImageLoader.FaceImage faceImage : faceImages) {
+                        Log.d(TAG, "  - 用户: " + faceImage.userName);
+                    }
+                } else {
+                    Toast.makeText(MainActivity.this, "未找到人脸图片", Toast.LENGTH_SHORT).show();
+                    Log.w(TAG, "未加载到任何人脸图片");
+                }
+            });
+        }).start();
     }
 
     /**
@@ -96,6 +125,8 @@ public class MainActivity extends AppCompatActivity {
         if (analyzer != null) {
             analyzer.release();
         }
+        // 释放人脸图片资源
+        FaceImageLoader.releaseAll(faceImages);
         cameraManager.stopCamera();
     }
 }
